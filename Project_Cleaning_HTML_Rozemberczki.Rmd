@@ -1,0 +1,232 @@
+---
+title: "Data Science for Business Project - Part I. Data Cleaning"
+author: "Benedek Andras Rozemberczki"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Data Science for Business Project}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## The dataset used for the analysis.
+
+\justify The dataset used for the project is from \textit{Kaggle}and describes the properties of used cars sold at three different auction sites. Originally it has the name \textit{Don't get kicked}. A number of cars is actually a lemon (the buyer of the car is being kicked), which means that it is sold well above price and the car is itself useless scrap metal. The goal of the machine learning exercise is to predict whether a car is a lemon or not -- so essentially the supervised problem is classification into the binary class bad buy or not. The original labeled data set has $N = 72983$ observations, and this is later separated into training and test sets. The number of possible predictors initially is $p = 33$, but this includes the identification number that I drop in the first step of my analysis.
+
+## Initialization
+
+A number of steps such as the building of random forests and the test-training separation, uses random number generation so I set the random seed as a first step -- this also makes results reproducible. Later I load in the libraries needed for the cleaning of the dataset. 
+
+```{r message=FALSE,results="hide", warning=FALSE}
+
+set.seed(2016)
+library(plyr)
+library(dummies)
+```
+## Loading the dataset
+
+The dataset is stored in a comma separated values files, where the separators are semicolons. The dataset is loaded into the dataframed named as DF. The description of the variables is in a text file. I load into R as a dataframe called Description.
+
+
+```{r message=FALSE,results="hide", warning=FALSE}
+setwd("C:/Users/Benedek/Dropbox/V. Semester/Data Science for Business/Final project/Dataset")
+DF <- read.csv("training.csv", header = TRUE, stringsAsFactors = FALSE)
+Description <- read.csv("Description.txt", header = TRUE, sep = ";", stringsAsFactors = FALSE)
+```
+## Dropping the ID variable and extracting engine properties
+The first variable is an ID of the observations, to prevent data leakage I drop it from the dataset. Importantly the Model and Submodel variables are stored as string. They contain valuable information about the driving system of the car, the number of cylinders. Moreover, the strings alos describes whether the engine uses one of the following:
+
+* Sequential Multiport Fuel Injection
+* Sequential Fuel Injection
+* Multiport Fuel Injection
+* Double Overhead Camshaft
+
+As a matter of fact this is not stated explicitly by Kaggle, so as part of my project I looked up what is the exact meaning of the abbrevations. I also took a look at the unique values of the Model and Submodel variables to get ideas about potential predictor extractions. The different engine properties are encoded as dummies, the dummy variables take the value 1, when a the engine of the car has the property described the variable.
+```{r message=FALSE,results="hide", warning=FALSE}
+DF <- DF[,-1]
+
+Extract <- c("4WD","2WD","AWD","FWD","V8","V6","4C","6C","DOHC","MPI","SF","MFI","EF")
+
+for ( i in 1:length(Extract)){
+  DF[,33+i] <- 0
+  DF[,33+i][grep(Extract[i], DF$Model)] <- 1  
+  DF[,33+i][grep(Extract[i], DF$SubModel)] <- 1}
+
+colnames(DF)[34:46] <- c("WD4","WD2","AWD","FWD","V8","V6","C4","C6","DOHC","MPI","SF","MFI","EF")
+```
+## The number of injectors
+The dataset describes the number of injectors in the engine, to extract these I used the grep function. It worth emphasizing that this property is described in 3 differnt ways, without whitespace, with a whitespace and with a "-" sign.
+```{r message=FALSE,results="hide", warning=FALSE}
+DF$I4 <- 0
+DF$I4[grep("I4", DF$Model)] <- 1
+DF$I4[grep("I 4", DF$Model)] <- 1
+DF$I4[grep("I-4", DF$Model)] <- 1
+
+DF$I6 <- 0
+DF$I6[grep("I6", DF$Model)] <- 1
+DF$I6[grep("I 6", DF$Model)] <- 1
+DF$I6[grep("I-6", DF$Model)] <- 1
+```
+## Engine size
+
+The size of the engine is encoded in the Model and Submodel variables, but these variables are still strings, the size of the engine varies from 1.4L (small smart car) to 8.9L (large truck). To extract the engine size I use a the grep function and two for loops that combine the two digits. The baseline engine variable value is missing. In the end the string is encoded as a factor variable. At the end of the cleaning process the variable is encoded into different dummy variables. 
+
+```{r message=FALSE,results="hide", warning=FALSE}
+firstdigits <- c("1","2","3","4","5","6","7","8")
+seconddigits <- c("0","1","2","3","4","5","6","7","8","9")
+DF$EngineSize <- "Missing"
+
+for (first in firstdigits){
+  for (second in seconddigits){
+    
+    Check <- paste0(first,".",second,"L")
+    DF$EngineSize[grep(Check,DF$Model)] <- Check
+    DF$EngineSize[grep(Check,DF$SubModel)] <- Check
+  
+    check <- paste0(first,".",second,"l")
+    DF$EngineSize[grep(check,DF$Model)] <- Check
+    DF$EngineSize[grep(check,DF$SubModel)] <- Check
+  }
+}
+DF$EngineSize <- as.factor(DF$EngineSize)
+```
+## Bodye of the car
+The submodel variable contains the body type as strings namely the following body types are differentiated in the dataset:
+* Wagon
+* Pickup
+* Minivan
+* Coupe
+* Sedan
+* External Cabrio
+* Quad
+
+```{r message=FALSE,results="hide", warning=FALSE}
+Type_of_Body <- c("WAGON","PICKUP","MINIVAN","COUPE","SEDAN","EXT CAB","QUAD")
+
+for (j in 1:length(Type_of_Body)){
+  DF[,49+j] <- 0
+  DF[,49+j][grep(Type_of_Body[j], DF$SubModel)] <- 1
+  }
+
+colnames(DF)[50:56] <- c("WAGON","PICKUP","MINIVAN","COUPE","SEDAN","EXTCAB","QUAD")
+```
+## Date of the purchase
+
+The purchase date of the car is in a string. The year, month and day is separated by a dash. I strip the original date vector based on the dash, the first part is saved as month, the second as day and third as the year. These are saved as different factor variables. As a last step they are column binded to the main dataframe.
+```{r message=FALSE,results="hide", warning=FALSE}
+DF$PurchDate <- as.character(DF$PurchDate)
+Dateelements <- strsplit(DF$PurchDate, "/")
+N <- nrow(DF)
+Year = Day = Month = 1:N
+
+for (i in 1:N){
+  
+  if ( i%% 1000 ==1){print(i)}
+  
+  Element <- Dateelements[[i]]
+  Month[i] <- Element[1]
+  Day[i] <- Element[2]
+  Year[i] <- Element[3]
+}
+
+Day <-  as.factor(Day)
+Month <-  as.factor(Month)
+Year <-  as.factor(Year)
+DF <- cbind(DF,Day,Month,Year)
+```
+## Common group for low frequency values in Trim
+The trim variables has a large number of values that have a low occurence (only 5-200 instances). These occurences are merged into one signle group in this step. The cutoff is chosen at 200. This results altogether in 43 unique categoires in the Trim variable -- including the large group that contains the merged categories with low counts.
+
+As a last step the previously used string variabels such as Date, Model, Submodel and Trim are dropped from the main dataframe. 
+```{r message=FALSE,results="hide", warning=FALSE}
+Trim_drops <- as.data.frame(count(DF, 'Trim'))
+Trim_drops <- Trim_drops[Trim_drops$freq > 200,]
+DF$Trim_encoded <- "Other"
+
+for (Checkup in Trim_drops[,1]){DF$Trim_encoded[DF$Trim == Checkup] <- Checkup}
+
+DF$Trim_encoded <- as.factor(DF$Trim_encoded)
+DF <- DF[,c(-7,-8,-9)]
+DF <- DF[,-2]
+```
+## Ratios from prices
+
+The prices have to be stored as numeric values. First I calculate ratios from the average and specific prices of the cars. These are more normalied than the differences would be. Later on I calculate ratios from these price ratios and the cars age. I also normalize the prices by the standing of the odometer. I do normalizations by the vehicles cost and the warranty cost also. As a last step I calculate the ratio of the vehicle and warranty costs.
+```{r message=FALSE,results="hide", warning=FALSE}
+for (i in 14:21){DF[,i] <- as.numeric(DF[,i])}
+
+DF$AcAuPrice <- DF[,15]/DF[,14]
+DF$AcRetPrice <- DF[,17]/DF[,16]
+DF$CurrAuPrice <- DF[,19]/DF[,18]
+DF$CurrRetPrice <- DF[,21]/DF[,20]
+
+DF$AcAuPriceOverAge <- DF$AcAuPrice / DF$VehicleAge
+DF$AcRetPriceOverAge <- DF$AcRetPrice / DF$VehicleAge
+DF$CurrAuPriceOverAge <- DF$CurrAuPrice / DF$VehicleAge
+DF$CurrRetPriceOverAge <- DF$CurrRetPrice / DF$VehicleAge
+DF$OdoOverage <- DF$VehOdo / DF$VehicleAge
+
+DF$AcAuPriceOverOdo <- DF$AcAuPrice / DF$VehOdo
+DF$AcRetPriceOverOdo <- DF$AcRetPrice / DF$VehOdo
+DF$CurrAuPriceOverOdo <- DF$CurrAuPrice / DF$VehOdo
+DF$CurrRetPriceOverOdo <- DF$CurrRetPrice / DF$VehOdo
+
+DF$AcAuPriceOverCost <- DF$AcAuPrice / DF$VehBCost
+DF$AcRetPriceOverCost <- DF$AcRetPrice / DF$VehBCost
+DF$CurrAuPriceOverCost <- DF$CurrAuPrice / DF$VehBCost
+DF$CurrRetPriceOverCost <- DF$CurrRetPrice / DF$VehBCost
+
+DF$AcAuPriceOverWarranty <- DF$AcAuPrice / DF$WarrantyCost
+DF$AcRetPriceOverWarranty <- DF$AcRetPrice / DF$WarrantyCost
+DF$CurrAuPriceOverWarranty <- DF$CurrAuPrice / DF$WarrantyCost
+DF$CurrRetPriceOverWarranty <- DF$CurrRetPrice / DF$WarrantyCost
+
+DF$CostRatio <- DF$VehBCost / DF$WarrantyCost
+```
+## Dummies from factors
+The factor variables can be transformed into dummies, this speeds up the use of randomforest and gradient boosting -- and makes possible the use of neural networks. The dummy separation is applied on maker, day, year, month, the vehicle production date, color, nationality, the state, engine size and on the encoded trim variable. The original factors are dropped from the dataset.
+```{r message=FALSE,results="hide", warning=FALSE}
+DF<-DF[,-c(25,24)]
+
+DF <- cbind(DF,dummy(DF$Make))
+DF <- cbind(DF,dummy(DF$Day))
+DF <- cbind(DF,dummy(DF$Year))
+DF <- cbind(DF,dummy(DF$Month))
+DF <- cbind(DF,dummy(DF$VehYear))
+DF <- cbind(DF,dummy(DF$Color))
+DF <- cbind(DF,dummy(DF$Nationality))
+DF <- cbind(DF,dummy(DF$VNST))
+DF <- cbind(DF,dummy(DF$EngineSize))
+DF <- cbind(DF,dummy(DF$Trim_encoded))
+
+DF <- DF[,-c(3,5,6,11,24,43,51,52,53,54)]
+```
+## Dropping variables without variation
+
+A number of possible predictors that can be used in solving the classification problem has no variation. This means that they are essentially useless for the later use. I drop these variables from the dataset because they only take memory. This is done in this step.
+
+
+```{r message=FALSE,results="hide", warning=FALSE}
+Dropout_lister <- c()
+
+for (i in 1:ncol(DF)){
+  
+  print(i)
+  
+  if (unique(DF[,i]) == 1){Dropout_lister <- rbind(Dropout_lister, c(i))}
+}
+```
+
+## Creating the dataset used for machine learning
+
+The dataset is now ready for additional data exploration and machine learning. It is stored as a comma spearated values file without the rownames.
+
+```{r message=FALSE,results="hide", warning=FALSE}
+write.csv(DF,file="Clean_dataset.csv",row.names=FALSE)
+
+
+```
+
+
+
+
