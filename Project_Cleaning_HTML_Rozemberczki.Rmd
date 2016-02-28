@@ -191,7 +191,7 @@ for (first in firstdigits){
 DF$EngineSize <- as.factor(DF$EngineSize)
 ```
 
-## Bodye of the car
+## Body of the car
 The submodel variable contains the body type as strings namely the following body types are differentiated in the dataset:
 * Wagon
 * Pickup
