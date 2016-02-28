@@ -1,5 +1,5 @@
 ---
-title: "Data Science for Business Project - Part I. Data Cleaning"
+title: "Data Science for Business Project"
 author: "Benedek Andras Rozemberczki"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -8,24 +8,70 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
-
+# Part I. -- Data cleaning and exploration
 ## The dataset used for the analysis.
 
-\justify The dataset used for the project is from \textit{Kaggle}and describes the properties of used cars sold at three different auction sites. Originally it has the name \textit{Don't get kicked}. A number of cars is actually a lemon (the buyer of the car is being kicked), which means that it is sold well above price and the car is itself useless scrap metal. The goal of the machine learning exercise is to predict whether a car is a lemon or not -- so essentially the supervised problem is classification into the binary class bad buy or not. The original labeled data set has $N = 72983$ observations, and this is later separated into training and test sets. The number of possible predictors initially is $p = 33$, but this includes the identification number that I drop in the first step of my analysis.
+\justify The dataset used for the project is from \textit{Kaggle} and describes the properties of used cars sold by Carvana at three different auction sites. Originally it has the name \textit{Don't get kicked}. A number of cars is actually a lemon (the buyer of the car is being kicked), which means that it is sold well above price and the car is itself useless scrap metal. The goal of the machine learning exercise is to predict whether a car is a lemon or not -- so essentially the supervised problem is classification into the binary class bad buy or not. The original labeled data set has $N = 72983$ observations, and this is later separated into training and test sets. The number of possible predictors initially is $p = 33$, but this includes the identification number that I drop in the first step of my analysis. Throughout my work I struggled with the size of the sample -- to deal with this I saved the predictions and characteristics error rates as csv files. Access to the dataset:
+
+[Link of the Kaggle dataset](https://www.kaggle.com/c/DontGetKicked/data)
+
+-- The R code chunks that would run for considerable time are set to be not evaluated! To run the code properly You have to set the chunks to be evaluated. Keep this in mind if you want to reproduce my results. --
+
+
+## Predictors and the predicted variable.
+The initial variables that are in the dataset are the following:
+
+* __RefID:__ Unique (sequential) number assigned to vehicles
+* **IsBadBuy:** Identifies if the kicked vehicle was an avoidable purchase 
+* **PurchDate:** The Date the vehicle was Purchased at Auction
+* **Auction:** Auction provider at which the  vehicle was purchased
+* **VehYear:** The manufacturer's year of the vehicle
+* **VehicleAge:** The Years elapsed since the manufacturer's year
+* **Make:** Vehicle Manufacturer 
+* **Model:** Vehicle Model
+* **Trim:** Vehicle Trim Level
+* **SubModel:** Vehicle Submodel
+* **Color:** Vehicle Color
+* **Transmission:** Vehicles transmission type (Automatic, Manual)
+* **WheelTypeID:** The type id of the vehicle wheel
+* **WheelType:** The vehicle wheel type description (Alloy, Covers)
+* **VehOdo:** The vehicles odometer reading
+* **Nationality:** The Manufacturer's country
+* **Size:** The size category of the vehicle (Compact, SUV, etc.)
+* **TopThreeAmericanName:** Identifies if the manufacturer is one of the top three American manufacturers
+* **MMRAcquisitionAuctionAveragePrice:** Acquisition price for this vehicle in average condition at time of purchase	
+* **MMRAcquisitionAuctionCleanPrice:** Acquisition price for this vehicle in the above Average condition at time of purchase
+* **MMRAcquisitionRetailAveragePrice:** Acquisition price for this vehicle in the retail market in average condition at time of purchase
+* **MMRAcquisitonRetailCleanPrice:** Acquisition price for this vehicle in the retail market in above average condition at time of purchase
+* **MMRCurrentAuctionAveragePrice:** Acquisition price for this vehicle in average condition as of current day	
+* **MMRCurrentAuctionCleanPrice:** Acquisition price for this vehicle in the above condition as of current day
+* **MMRCurrentRetailAveragePrice:** Acquisition price for this vehicle in the retail market in average condition as of current day
+* **MMRCurrentRetailCleanPrice:** Acquisition price for this vehicle in the retail market in above average condition as of current day
+* **PRIMEUNIT:** Identifies if the vehicle would have a higher demand than a standard purchase
+* **AcquisitionType:** Identifies how the vehicle was aquired (Auction buy, trade in, etc)
+* **AUCGUART:** The level guarntee provided by auction for the vehicle (Green light - Guaranteed/arbitratable, Yellow Light - caution/issue, red light - sold as is)
+* **KickDate:** Date the vehicle was kicked back to the auction
+* **BYRNO:** Unique number assigned to the buyer that purchased the vehicle
+* **VNZIP:** Zipcode where the car was purchased
+* **VNST:** State where the the car was purchased
+* **VehBCost:** Acquisition cost paid for the vehicle at time of purchase
+* **IsOnlineSale:** Identifies if the vehicle was originally purchased online
+* **WarrantyCost:** Warranty price (term=36month  and millage=36K) 
 
 ## Initialization
 
-A number of steps such as the building of random forests and the test-training separation, uses random number generation so I set the random seed as a first step -- this also makes results reproducible. Later I load in the libraries needed for the cleaning of the dataset. 
+A number of steps such as the building of random forests and the test-training separation, uses random number generation so I set the random seed as a first step -- this also makes results reproducible. Later I load in the libraries needed for the cleaning of the dataset and also for plotting.
 
 ```{r message=FALSE,results="hide", warning=FALSE}
 
 set.seed(2016)
 library(plyr)
 library(dummies)
+library(ggplot2)
 ```
 ## Loading the dataset
 
-The dataset is stored in a comma separated values files, where the separators are semicolons. The dataset is loaded into the dataframed named as DF. The description of the variables is in a text file. I load into R as a dataframe called Description.
+The dataset is stored in a comma separated values files, where the separators are semicolons. The dataset is loaded into the dataframe named as DF. The description of the variables is in a text file. I load it into R as a dataframe called Description.
 
 
 ```{r message=FALSE,results="hide", warning=FALSE}
@@ -33,16 +79,68 @@ setwd("C:/Users/Benedek/Dropbox/V. Semester/Data Science for Business/Final proj
 DF <- read.csv("training.csv", header = TRUE, stringsAsFactors = FALSE)
 Description <- read.csv("Description.txt", header = TRUE, sep = ";", stringsAsFactors = FALSE)
 ```
+## Descriptive statistics
+
+This smaller section does some data exploration in a nutshell. It gives hints about possible data transformation and data cleaning that has to be done later.
+
+
+### Relationship among prices
+
+The relationship among the price variables is linear -- this later might cause problems when decision trees are used, as collineairity increases the correlation among trees which results in increased variance of predictions. This has to be kept in mind, when one uses high variance methods such as decision trees.
+```{r fig.width=5, fig.height=5, warning=FALSE}
+plot(DF$MMRCurrentRetailCleanPrice, DF$MMRCurrentRetailAveragePrice, 
+     main = "Current Retail Prices Scatter Plot",
+xlab = "Current Retail Clean Price", ylab = "Current Retail Average Price")
+```
+
+
+### Distribution of the vehicle age
+The car age values are imputed with a high granularity, which means that this measure is somewhat a low quality description of the cars age -- the distribution is not strongly skewed. 
+```{r fig.width=5, fig.height=5, warning=FALSE}
+hist(DF$VehicleAge, right = FALSE,  col = "red", main = "Vehicle age in years", xlab = "Age")
+```
+
+
+### Distribution of the odometer standings
+
+The odomoter standings show a rather remarkable empirical regularity -- the distribution has a tail on the left. The distribution itself is unimodal, it is fairly smooth based on the histogram.
+
+```{r fig.width=5, fig.height=5, warning=FALSE}
+hist(DF$VehOdo, main = "Histogram for the odomoter values", xlab = "Odometer value",col="blue")
+
+```
+
+
+### Distribution of warranty costs
+
+
+The distribution of the warranty costs shows a distribution that is very tipycal in case of price, income and cost variables. It has a skewed distribution with a tail on the right, as later I use tree based methods I do not implement normalization (log trasformation) and standardization to deal with these. Tree based methods are invariant to monotonous transformations.
+```{r fig.width=5, fig.height=5, warning=FALSE}
+hist(DF$WarrantyCost, main = "Histogram of the warranty costs", xlab = "Warranty cost",
+     right=FALSE,  col="orange")
+```
+
+
+### Distribution of vehicle acquisition costs
+
+The distribution of the vehicle acquisition costs describe the distribution of the prices that the auctioner paid for acquiring the car that is sold later. Intruiguingly this is just slightly  skewed, unlike the warranty costs histogram that had shown a strongly visible skewed distribution -- it had a tail on the right.
+
+```{r fig.width=5, fig.height=5, warning=FALSE}
+hist(DF$VehBCost, main="Histogram of the vehicle accquisiton costs", xlab = "Acquisiton cost",
+     right=FALSE,  col="green")
+```
+
+
 ## Dropping the ID variable and extracting engine properties
-The first variable is an ID of the observations, to prevent data leakage I drop it from the dataset. Importantly the Model and Submodel variables are stored as string. They contain valuable information about the driving system of the car, the number of cylinders. Moreover, the strings alos describes whether the engine uses one of the following:
+The first variable is an ID of the observations, to prevent data leakage I drop it from the dataset. Importantly the Model and Submodel variables are stored as string. They contain valuable information about the driving system of the car, the number of cylinders. Moreover, the strings also describe whether the engine uses one of the following:
 
 * Sequential Multiport Fuel Injection
 * Sequential Fuel Injection
 * Multiport Fuel Injection
 * Double Overhead Camshaft
 
-As a matter of fact this is not stated explicitly by Kaggle, so as part of my project I looked up what is the exact meaning of the abbrevations. I also took a look at the unique values of the Model and Submodel variables to get ideas about potential predictor extractions. The different engine properties are encoded as dummies, the dummy variables take the value 1, when a the engine of the car has the property described the variable.
-```{r message=FALSE,results="hide", warning=FALSE}
+As a matter of fact this is not stated explicitly by Kaggle, so as part of my project I looked up what is the exact meaning of the abbrevations. I also took a look at the unique values of the Model and Submodel variables to get ideas about potential predictor extractions. The different engine properties are encoded as dummies, the dummy variables take the value 1, when the engine of the car has the property described by the string.
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 DF <- DF[,-1]
 
 Extract <- c("4WD","2WD","AWD","FWD","V8","V6","4C","6C","DOHC","MPI","SF","MFI","EF")
@@ -54,9 +152,10 @@ for ( i in 1:length(Extract)){
 
 colnames(DF)[34:46] <- c("WD4","WD2","AWD","FWD","V8","V6","C4","C6","DOHC","MPI","SF","MFI","EF")
 ```
+
 ## The number of injectors
-The dataset describes the number of injectors in the engine, to extract these I used the grep function. It worth emphasizing that this property is described in 3 differnt ways, without whitespace, with a whitespace and with a "-" sign.
-```{r message=FALSE,results="hide", warning=FALSE}
+The dataset describes the number of injectors in the engine, to extract these I used the grep function. It worth emphasizing that this property is described in 3 different ways, without whitespace, with a whitespace and with a "-" sign.
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 DF$I4 <- 0
 DF$I4[grep("I4", DF$Model)] <- 1
 DF$I4[grep("I 4", DF$Model)] <- 1
@@ -67,11 +166,12 @@ DF$I6[grep("I6", DF$Model)] <- 1
 DF$I6[grep("I 6", DF$Model)] <- 1
 DF$I6[grep("I-6", DF$Model)] <- 1
 ```
+
 ## Engine size
 
 The size of the engine is encoded in the Model and Submodel variables, but these variables are still strings, the size of the engine varies from 1.4L (small smart car) to 8.9L (large truck). To extract the engine size I use a the grep function and two for loops that combine the two digits. The baseline engine variable value is missing. In the end the string is encoded as a factor variable. At the end of the cleaning process the variable is encoded into different dummy variables. 
 
-```{r message=FALSE,results="hide", warning=FALSE}
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 firstdigits <- c("1","2","3","4","5","6","7","8")
 seconddigits <- c("0","1","2","3","4","5","6","7","8","9")
 DF$EngineSize <- "Missing"
@@ -90,6 +190,7 @@ for (first in firstdigits){
 }
 DF$EngineSize <- as.factor(DF$EngineSize)
 ```
+
 ## Bodye of the car
 The submodel variable contains the body type as strings namely the following body types are differentiated in the dataset:
 * Wagon
@@ -100,7 +201,7 @@ The submodel variable contains the body type as strings namely the following bod
 * External Cabrio
 * Quad
 
-```{r message=FALSE,results="hide", warning=FALSE}
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 Type_of_Body <- c("WAGON","PICKUP","MINIVAN","COUPE","SEDAN","EXT CAB","QUAD")
 
 for (j in 1:length(Type_of_Body)){
@@ -110,10 +211,11 @@ for (j in 1:length(Type_of_Body)){
 
 colnames(DF)[50:56] <- c("WAGON","PICKUP","MINIVAN","COUPE","SEDAN","EXTCAB","QUAD")
 ```
+
 ## Date of the purchase
 
 The purchase date of the car is in a string. The year, month and day is separated by a dash. I strip the original date vector based on the dash, the first part is saved as month, the second as day and third as the year. These are saved as different factor variables. As a last step they are column binded to the main dataframe.
-```{r message=FALSE,results="hide", warning=FALSE}
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 DF$PurchDate <- as.character(DF$PurchDate)
 Dateelements <- strsplit(DF$PurchDate, "/")
 N <- nrow(DF)
@@ -135,10 +237,10 @@ Year <-  as.factor(Year)
 DF <- cbind(DF,Day,Month,Year)
 ```
 ## Common group for low frequency values in Trim
-The trim variables has a large number of values that have a low occurence (only 5-200 instances). These occurences are merged into one signle group in this step. The cutoff is chosen at 200. This results altogether in 43 unique categoires in the Trim variable -- including the large group that contains the merged categories with low counts.
+The trim variables has a large number of values that have a low occurence (only 5-200 instances). These occurences are merged into one single group in this step. The cutoff is chosen at 200. This results altogether in 43 unique categories in the Trim variable -- including the large group that contains the merged categories with low counts.
 
 As a last step the previously used string variabels such as Date, Model, Submodel and Trim are dropped from the main dataframe. 
-```{r message=FALSE,results="hide", warning=FALSE}
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 Trim_drops <- as.data.frame(count(DF, 'Trim'))
 Trim_drops <- Trim_drops[Trim_drops$freq > 200,]
 DF$Trim_encoded <- "Other"
@@ -151,8 +253,8 @@ DF <- DF[,-2]
 ```
 ## Ratios from prices
 
-The prices have to be stored as numeric values. First I calculate ratios from the average and specific prices of the cars. These are more normalied than the differences would be. Later on I calculate ratios from these price ratios and the cars age. I also normalize the prices by the standing of the odometer. I do normalizations by the vehicles cost and the warranty cost also. As a last step I calculate the ratio of the vehicle and warranty costs.
-```{r message=FALSE,results="hide", warning=FALSE}
+The prices have to be stored as numeric values. First I calculate ratios from the average and specific prices of the cars. These are more normalized than the differences would be. Later on I calculate ratios from these price ratios and the cars age. I also normalize the prices by the standing of the odometer. I do normalizations by the vehicles cost and the warranty cost also. As a last step I calculate the ratio of the vehicle and warranty costs.
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 for (i in 14:21){DF[,i] <- as.numeric(DF[,i])}
 
 DF$AcAuPrice <- DF[,15]/DF[,14]
@@ -184,8 +286,8 @@ DF$CurrRetPriceOverWarranty <- DF$CurrRetPrice / DF$WarrantyCost
 DF$CostRatio <- DF$VehBCost / DF$WarrantyCost
 ```
 ## Dummies from factors
-The factor variables can be transformed into dummies, this speeds up the use of randomforest and gradient boosting -- and makes possible the use of neural networks. The dummy separation is applied on maker, day, year, month, the vehicle production date, color, nationality, the state, engine size and on the encoded trim variable. The original factors are dropped from the dataset.
-```{r message=FALSE,results="hide", warning=FALSE}
+The factor variables can be transformed into dummies, this speeds up the use of randomforest and gradient boosting -- and would make possible the use of neural networks. The dummy separation is applied on maker, day, year, month, the vehicle production date, color, nationality, the state, engine size and on the encoded trim variable. The original factors are dropped from the dataset.
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 DF<-DF[,-c(25,24)]
 
 DF <- cbind(DF,dummy(DF$Make))
@@ -206,7 +308,7 @@ DF <- DF[,-c(3,5,6,11,24,43,51,52,53,54)]
 A number of possible predictors that can be used in solving the classification problem has no variation. This means that they are essentially useless for the later use. I drop these variables from the dataset because they only take memory. This is done in this step.
 
 
-```{r message=FALSE,results="hide", warning=FALSE}
+```{r message=FALSE,results="hide", warning=FALSE,eval=FALSE}
 Dropout_lister <- c()
 
 for (i in 1:ncol(DF)){
@@ -215,18 +317,279 @@ for (i in 1:ncol(DF)){
   
   if (unique(DF[,i]) == 1){Dropout_lister <- rbind(Dropout_lister, c(i))}
 }
-```
 
+DF <- DF[,-Dropout_lister]
+
+```
 ## Creating the dataset used for machine learning
 
-The dataset is now ready for additional data exploration and machine learning. It is stored as a comma spearated values file without the rownames.
 
-```{r message=FALSE,results="hide", warning=FALSE}
-write.csv(DF,file="Clean_dataset.csv",row.names=FALSE)
+The dataset is now close to be ready for machine learning. As a last step it is stored as a comma spearated values file without the rownames.
 
+```{r message=FALSE, results="hide", warning=FALSE,eval=FALSE}
+write.csv(DF, file="Clean_dataset.csv",row.names=FALSE)
+```
 
+# Part II. -- Machine learning
+
+## Loading needed machine learning libraries
+
+The machine learning part of the study focuses on tree based methods, as we have covered them in the course extensively. I load in one additional package to plot receiver operating curves.
+
+```{r message=FALSE, results="hide", warning=FALSE}
+library(ranger)
+library(rpart)
+library(gbm)
+library(ROCR)
+```
+## Loading the new dataset
+
+I load in the clean dataset for the machine learning part. 
+
+```{r message=FALSE, results="hide", warning=FALSE}
+DF <- read.csv(file = "Clean_dataset.csv")
 ```
 
 
 
+## Defining a mode function for ensemble decision making
 
+I will use ensemble learning extensively, so I need a mode function to make a majority voting about the status of the car (lemon or good one) based on the comitee voting in the ensemble. 
+
+```{r message=FALSE, results="hide", warning=FALSE}
+mode <- function(row) {
+  urow <- unique(row)
+  urow[which.max(tabulate(match(row, urow)))]}
+```
+
+## Defining a mode function for ensemble decision making
+
+To do proper model selection I splitted my sample randomly into train and test sets, the train has 80% of the original dataset and the test set has the remainder part. Before doing this I set the outcome variable to be a factor, because I start the modeling with classification trees and random forests.
+
+```{r message=FALSE, results="hide", warning=FALSE}
+set.seed(2016)
+DF$IsBadBuy <- as.factor(DF$IsBadBuy)
+N <- nrow(DF)
+ID <- sample(1:N, 0.8*N)
+Train <- DF[ID,]
+Test <- DF[-ID,]
+```
+## Pruned decision tree learning
+
+In this part I will consider a very simple model -- a pruned decision tree. First i fit a decision tree with the baseline settings -- the complexity parameter is set to be zero.
+### Estimating the tree and post-pruning
+
+```{r message=FALSE, results="hide", warning=FALSE, eval=FALSE}
+error_tree <- c()
+complexity <- c()
+tree_model <- rpart(IsBadBuy~ ., data = Train , control = rpart.control(cp = 0))
+```
+
+Later I prune the fitted model based on different complexity values -- between 0.00005 and 0.025. For each of the pruned trees I calculate the test set error to help model selection. This can be visualized also.
+
+```{r message=FALSE, results="hide", warning=FALSE, eval=FALSE}
+for (i in 1:500){
+  
+    print(i)
+    complexity[i] <- i*0.00005
+    pruned_tree <- prune(tree_model,cp = i*0.00005)
+    
+    phat <- predict(pruned_tree, Test)[,"1"]
+    
+    tab <- table(ifelse(phat > 0.5,1,0), Test$IsBadBuy)
+    error_tree[i] <- ((tab[1,2]+tab[2,1]) / nrow(Test))
+    print(error_tree[i])
+}
+
+tree_tuning <- cbind(complexity, error_tree)
+
+write.csv(tree_tuning, file = "error_rates_trees.csv", row.names = FALSE)
+```
+
+### Plotting the error rate as a function of complexity
+
+The error rate as a function of the complexity shows that the optimal complexity pruning is around 0.00035. This is also supported by the printout of the best fitting models error value.
+
+```{r fig.width=5, fig.height=5, warning=FALSE}
+tree_input <- read.csv("error_rates_trees.csv")
+plot(tree_input$complexity,tree_input$error_tree,type="l",
+     main = "Test error as a function of complexity",
+     xlab="Complexity",ylab="Test error rate",col="blue")
+```
+
+### Choosing the optimal complexity of pruning
+
+
+The optimal level of pruning is at where the test error is minimal, this is simply printing out the dataframe elements where the error equals the minimal error. There are multiple complexity parameters that result in pruned trees that are essentially same.
+```{r}
+print(tree_input[tree_input$error_tree == min(tree_input$error_tree),])
+```
+
+### Fitting the optimal pruned tree
+
+```{r,message=FALSE, results="hide", warning=FALSE, eval=FALSE}
+pruned_tree <- prune(tree_model, cp = 0.00075)
+phat <- predict(pruned_tree, Test)[,"1"]
+write.csv(phat, file = "tree_predictions.csv", row.names = FALSE)
+```
+Based on the optimally pruned tree one can make prediction and plot the receiver operating curve to evaluate the model. The fit is fairly weak, as the area under the curve is pretty small. However, it should not be overlooked that obtaining a strong fit is not easy, because the problem is unbalanced. The contingency table shows that misclassifications are largely due to false negatives, 1369 of the misclassifications is a false negative one. From a business point of view this model is dangerous. Rejecting cars that are good ones (false positive flagging of lemons) is less costly than buying bad ones.
+
+### Making predictions and plotting ROC curve
+
+```{r fig.width=5, fig.height=5, warning=FALSE}
+phat <- read.csv("tree_predictions.csv")
+pred <- prediction(phat,Test$IsBadBuy)
+perf <- performance(pred,"tpr","fpr")
+plot(perf) 
+table_contingency <- table(ifelse(phat>0.5,1,0), Test$IsBadBuy)
+print(table_contingency)
+```
+## Random forest ensemble learning
+
+### Setting the number of predictors and learning the forests
+
+
+The random forest that I fit have a different number of predictors than the baseline setup -- which is the square root of the possible predictors floored down. During the modeling I have to face two problems:
+
+1. The prices and the price ratios are correlated -- essentially the weak learners migth end up being correlated.
+
+2. There is a large number of uncorrelated dummy variables -- the trees are extremely weak if a lower number of predictors is used than the preset number of predictors.
+
+There is a clear trade-off between the two criteria. Because of this I fit random forest ensembles with different number of predictors -- I use $4,8,12,\dots,48$ predictors in the ensembles. The ensembles have 10 random forests, and each of the forests has 100 trees. The predictions on the test and training sets are both saved as comma separated values files. The seed is set within the loop, so the results are reproducible. Importantly, I used the \textit{ranger} R package which is a relativiely fast implementation of the random forest algorithm.
+
+```{r message=FALSE, results="hide", warning=FALSE,eval=FALSE}
+
+mtry_rate <- c(4,8,12,16,20,24,28,32,36,40,44,48)
+error <- c()
+
+for (k in 1:12){
+  yhat <- c()
+  yhat_train <- c()
+  prednum <- mtry_rate[k]
+  for( i in 1:10){
+  
+    print(i)
+    md <- ranger(IsBadBuy ~ ., data = Train, num.trees = 100,
+                 mtry = prednum, verbose = TRUE, write.forest=TRUE, classification = TRUE, seed = i)
+
+    yhat <- cbind(yhat, as.numeric(predict(md, Test, n.trees = 100)$predictions ) - 1)
+    
+    yhat_train <- cbind(yhat_train, as.numeric(predict(md, Train, n.trees = 100)$predictions ) - 1)
+    rm(md)
+    }
+
+  write.csv(yhat, file = paste0("randomforest_ensemble_predictors_test_", prednum,
+                                ".csv"), row.names = FALSE)
+  write.csv(yhat_train, file = paste0("randomforest_ensemble_predictors_train_", prednum,
+                                      ".csv"), row.names = FALSE)
+}
+```
+
+### The error rate of the random forests
+
+Based on the saved test predictions a simple error rate can be calculated for each of the ensembles. This function calculates the error based on the mode of the predictions (this is why I needed the mode -- to take a majority vote based on the predictions). For each fitted random forest ensemble ($p=4,8,\dots,48$) I calculate a test error and dump the vector of errors (12 entries) as a csv file for plotting and model selection.
+
+
+```{r message=FALSE, results="hide", warning=FALSE,eval=FALSE}
+mtry_rate <- c(4,8,12,16,20,24,28,32,36,40,44,48)
+error <- c()
+for (i in 1:12){
+  
+  yhat <- read.csv(paste0("./Dataset/randomforest_ensemble_predictors_test_",mtry_rate[i],".csv"))
+  ensemble_y <- c()
+
+  for (j in 1:nrow(yhat)){
+  
+    if (j %% 1000 == 0){ print(j) }
+  
+    ensemble_y[j] <- mode(yhat[j,])
+  }
+
+  error[i] <- sum(ensemble_y != as.numeric(Test$IsBadBuy) - 1) / nrow(Test)
+  
+  print(error[i])
+}
+
+write.csv(error, file="error_rates_random_forest.csv", row.names = FALSE)
+```
+
+
+### Error rate as a function of predictors in the forest
+
+
+The error rates of the different random forests can be plotted as a function of the randomly choosen predictors used for model evaluation. Based on this plot it is clear that the best model is an ensemble of 10 random forests, each of them with 100 trees with 40 randomly choosen variables.
+
+```{r fig.width=5, fig.height=5, warning=FALSE}
+error_rate <- read.csv("error_rates_random_forest.csv")$x
+predictors <- 4* 1:12
+plot(predictors,error_rate,type="o",col="red",xlab="Number of predictors",
+     ylab="Error rate",main="Error rate as a function of predictors in the forest")
+print(error_rate)
+```
+
+Based on the error rates plotted as a function of the predictors, the best performing model is an ensemble of random forests with 40 predictors. It has the same predicted error rate on the test set as the pruned single tree. Intriguingly, the ratio of false negatives is lower than in case of the pruned tree (now it is only 1323/14597), from a business point of view this model is better than the single tree. The ratio of undetected lemons is lower -- the car auctioner would be better off if she or he we would calculate the net loss based on the acquistion prices. So simply the cost of the two types of errors is not symmetric.
+
+## Gradient boosting with grid search
+
+### Setting the predicted variable and the hyper parameters
+
+The gradient boosting needs outcome variables that are numeric, both the test and train set bad buy variables are stored as factors. Because of this I redefine them as numerics and subtract 1 to define them to be in the zero-one interval. Later I also define a matrix to store the test error values obtained from the grid search and vectors to store the potential hyper parameter values. The depth of the interaction can be 1,5, or 10 while the shrinkage variew between 0.1, 0.3 and 0.5.
+
+```{r message=FALSE, results="hide", warning=FALSE,eval=FALSE}
+Train$IsBadBuy <- as.numeric(Train$IsBadBuy)-1
+
+Test$IsBadBuy <- as.numeric(Test$IsBadBuy)-1
+
+error <- matrix(0, 3, 3)
+interaction_values <- c(1, 5, 10)
+shrinkage_values <- c(0.5, 0.3, 0.1)
+```
+
+### Fitting the gradient boosted trees
+
+
+Based on the hyperparameters vectors above I fit 9 different gradient boosted tree models with grid searching. The gradient boosted models always have 20 trees, based on the verbose fitting procedures the overfitting starts around 20 trees. In each case I save the predictions on the test set and calculate the prediction error. The initial setup parameters of the model such as the size of the bag are unchanged. 
+
+```{r message=FALSE, results="hide", warning=FALSE,eval=FALSE}
+for (i in 1:3){
+  
+  for (j in 1:3){
+    
+    depth = interaction_values[i]
+    shrink = shrinkage_values[j]
+    
+    model <- gbm(IsBadBuy ~ ., data = Train, n.trees = 20,distribution="bernoulli",
+                 shrinkage=shrink,interaction.depth = depth,verbose=TRUE)
+    
+    yhat <- predict(model, Test, n.trees = 20) 
+    
+    write.csv(yhat ,file = paste0("predictions_test_GBM_depth_",depth,
+                               "_shrink_",shrink,".csv"),row.names=FALSE)
+    
+    tab_gbm <- table(ifelse(yhat > 0, 1, 0), Test$IsBadBuy)
+    error[i,j] <- (tab_gbm[1,2] + tab_gbm[2,1]) / nrow(Test)
+  }
+}
+
+write.csv(error, file = "gbm_error_values.csv", row.names = FALSE)
+```
+### Evaluation of the GBM models
+
+The error on the separated test set is lower in case of the model with interaction depth 10 and shrinkage parameter 0.1. Based on this I choose this one from the gradient boosted trees. The values in the matrix imply that other shrinkage and interaction depth values migth give a lower test error, but here I do not consider anything else.
+
+The number of false positives is extremely low in case of the best model -- it is only 49 cars from the test sample. This implies that this model is extremely useless from a business point of view, because false positives are less costly for the car auctioner than false negative ones. The error rate is low, but the unbalanced nature of the classification problem has to be taken into account.
+
+```{r fig.width=5, fig.height=5, warning=FALSE}
+error <- read.csv("gbm_error_values.csv")
+print(error)
+
+zhat <- read.csv(file = "predictions_test_GBM_depth_10_shrink_0.1.csv")[1]
+table_contingency <- table(ifelse(zhat > 0, 1, 0), as.numeric(Test$IsBadBuy)-1)
+print(table_contingency)
+```
+
+## Discussion
+
+Surprisingly the random forest and the simple pruned tree misclassify at the same rate. The gradient boosted trees do considerably worth. However with additional tuning and maybe with early stopping the  gradient boosting method might give fairly better results. __However, to sum it up in this specific case the asymmetric cost of misclassification should be also considered. I would choose the random forest to put in production, because it gave a fair trade of between the two types of classification errors, it cannout be overfit and the test error was the lowest.__  Importantly other external variables might improve the results fairly -- I read some posts on Kaggle about the importance of the selling point -- car owner's home distance. 
+
+##   \textit{  }

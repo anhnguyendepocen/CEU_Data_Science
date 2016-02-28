@@ -10,9 +10,9 @@
 
 <meta name="author" content="Benedek Andras Rozemberczki" />
 
-<meta name="date" content="2016-02-21" />
+<meta name="date" content="2016-02-28" />
 
-<title>Data Science for Business Project - Part I. Data Cleaning</title>
+<title>Data Science for Business Project</title>
 
 
 
@@ -52,40 +52,125 @@ code > span.er { color: #ff0000; font-weight: bold; }
 
 
 <div id="header">
-<h1 class="title">Data Science for Business Project - Part I. Data Cleaning</h1>
+<h1 class="title">Data Science for Business Project</h1>
 <h4 class="author"><em>Benedek Andras Rozemberczki</em></h4>
-<h4 class="date"><em>2016-02-21</em></h4>
+<h4 class="date"><em>2016-02-28</em></h4>
 </div>
 
 
+<div id="part-i.-data-cleaning-and-exploration" class="section level1">
+<h1>Part I. – Data cleaning and exploration</h1>
 <div id="the-dataset-used-for-the-analysis." class="section level2">
 <h2>The dataset used for the analysis.</h2>
-<p>The dataset used for the project is from and describes the properties of used cars sold at three different auction sites. Originally it has the name . A number of cars is actually a lemon (the buyer of the car is being kicked), which means that it is sold well above price and the car is itself useless scrap metal. The goal of the machine learning exercise is to predict whether a car is a lemon or not – so essentially the supervised problem is classification into the binary class bad buy or not. The original labeled data set has <span class="math">\(N = 72983\)</span> observations, and this is later separated into training and test sets. The number of possible predictors initially is <span class="math">\(p = 33\)</span>, but this includes the identification number that I drop in the first step of my analysis.</p>
+<p>The dataset used for the project is from  and describes the properties of used cars sold by Carvana at three different auction sites. Originally it has the name . A number of cars is actually a lemon (the buyer of the car is being kicked), which means that it is sold well above price and the car is itself useless scrap metal. The goal of the machine learning exercise is to predict whether a car is a lemon or not – so essentially the supervised problem is classification into the binary class bad buy or not. The original labeled data set has <span class="math">\(N = 72983\)</span> observations, and this is later separated into training and test sets. The number of possible predictors initially is <span class="math">\(p = 33\)</span>, but this includes the identification number that I drop in the first step of my analysis. Throughout my work I struggled with the size of the sample – to deal with this I saved the predictions and characteristics error rates as csv files. Access to the dataset:</p>
+<p><a href="https://www.kaggle.com/c/DontGetKicked/data">Link of the Kaggle dataset</a></p>
+<p>– The R code chunks that would run for considerable time are set to be not evaluated! To run the code properly You have to set the chunks to be evaluated. Keep this in mind if you want to reproduce my results. –</p>
+</div>
+<div id="predictors-and-the-predicted-variable." class="section level2">
+<h2>Predictors and the predicted variable.</h2>
+<p>The initial variables that are in the dataset are the following:</p>
+<ul>
+<li><strong>RefID:</strong> Unique (sequential) number assigned to vehicles</li>
+<li><strong>IsBadBuy:</strong> Identifies if the kicked vehicle was an avoidable purchase</li>
+<li><strong>PurchDate:</strong> The Date the vehicle was Purchased at Auction</li>
+<li><strong>Auction:</strong> Auction provider at which the vehicle was purchased</li>
+<li><strong>VehYear:</strong> The manufacturer’s year of the vehicle</li>
+<li><strong>VehicleAge:</strong> The Years elapsed since the manufacturer’s year</li>
+<li><strong>Make:</strong> Vehicle Manufacturer</li>
+<li><strong>Model:</strong> Vehicle Model</li>
+<li><strong>Trim:</strong> Vehicle Trim Level</li>
+<li><strong>SubModel:</strong> Vehicle Submodel</li>
+<li><strong>Color:</strong> Vehicle Color</li>
+<li><strong>Transmission:</strong> Vehicles transmission type (Automatic, Manual)</li>
+<li><strong>WheelTypeID:</strong> The type id of the vehicle wheel</li>
+<li><strong>WheelType:</strong> The vehicle wheel type description (Alloy, Covers)</li>
+<li><strong>VehOdo:</strong> The vehicles odometer reading</li>
+<li><strong>Nationality:</strong> The Manufacturer’s country</li>
+<li><strong>Size:</strong> The size category of the vehicle (Compact, SUV, etc.)</li>
+<li><strong>TopThreeAmericanName:</strong> Identifies if the manufacturer is one of the top three American manufacturers</li>
+<li><strong>MMRAcquisitionAuctionAveragePrice:</strong> Acquisition price for this vehicle in average condition at time of purchase<br /></li>
+<li><strong>MMRAcquisitionAuctionCleanPrice:</strong> Acquisition price for this vehicle in the above Average condition at time of purchase</li>
+<li><strong>MMRAcquisitionRetailAveragePrice:</strong> Acquisition price for this vehicle in the retail market in average condition at time of purchase</li>
+<li><strong>MMRAcquisitonRetailCleanPrice:</strong> Acquisition price for this vehicle in the retail market in above average condition at time of purchase</li>
+<li><strong>MMRCurrentAuctionAveragePrice:</strong> Acquisition price for this vehicle in average condition as of current day<br /></li>
+<li><strong>MMRCurrentAuctionCleanPrice:</strong> Acquisition price for this vehicle in the above condition as of current day</li>
+<li><strong>MMRCurrentRetailAveragePrice:</strong> Acquisition price for this vehicle in the retail market in average condition as of current day</li>
+<li><strong>MMRCurrentRetailCleanPrice:</strong> Acquisition price for this vehicle in the retail market in above average condition as of current day</li>
+<li><strong>PRIMEUNIT:</strong> Identifies if the vehicle would have a higher demand than a standard purchase</li>
+<li><strong>AcquisitionType:</strong> Identifies how the vehicle was aquired (Auction buy, trade in, etc)</li>
+<li><strong>AUCGUART:</strong> The level guarntee provided by auction for the vehicle (Green light - Guaranteed/arbitratable, Yellow Light - caution/issue, red light - sold as is)</li>
+<li><strong>KickDate:</strong> Date the vehicle was kicked back to the auction</li>
+<li><strong>BYRNO:</strong> Unique number assigned to the buyer that purchased the vehicle</li>
+<li><strong>VNZIP:</strong> Zipcode where the car was purchased</li>
+<li><strong>VNST:</strong> State where the the car was purchased</li>
+<li><strong>VehBCost:</strong> Acquisition cost paid for the vehicle at time of purchase</li>
+<li><strong>IsOnlineSale:</strong> Identifies if the vehicle was originally purchased online</li>
+<li><strong>WarrantyCost:</strong> Warranty price (term=36month and millage=36K)</li>
+</ul>
 </div>
 <div id="initialization" class="section level2">
 <h2>Initialization</h2>
-<p>A number of steps such as the building of random forests and the test-training separation, uses random number generation so I set the random seed as a first step – this also makes results reproducible. Later I load in the libraries needed for the cleaning of the dataset.</p>
+<p>A number of steps such as the building of random forests and the test-training separation, uses random number generation so I set the random seed as a first step – this also makes results reproducible. Later I load in the libraries needed for the cleaning of the dataset and also for plotting.</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">2016</span>)
 <span class="kw">library</span>(plyr)
-<span class="kw">library</span>(dummies)</code></pre>
+<span class="kw">library</span>(dummies)
+<span class="kw">library</span>(ggplot2)</code></pre>
 </div>
 <div id="loading-the-dataset" class="section level2">
 <h2>Loading the dataset</h2>
-<p>The dataset is stored in a comma separated values files, where the separators are semicolons. The dataset is loaded into the dataframed named as DF. The description of the variables is in a text file. I load into R as a dataframe called Description.</p>
+<p>The dataset is stored in a comma separated values files, where the separators are semicolons. The dataset is loaded into the dataframe named as DF. The description of the variables is in a text file. I load it into R as a dataframe called Description.</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">setwd</span>(<span class="st">&quot;C:/Users/Benedek/Dropbox/V. Semester/Data Science for Business/Final project/Dataset&quot;</span>)
 DF &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;training.csv&quot;</span>, <span class="dt">header =</span> <span class="ot">TRUE</span>, <span class="dt">stringsAsFactors =</span> <span class="ot">FALSE</span>)
 Description &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;Description.txt&quot;</span>, <span class="dt">header =</span> <span class="ot">TRUE</span>, <span class="dt">sep =</span> <span class="st">&quot;;&quot;</span>, <span class="dt">stringsAsFactors =</span> <span class="ot">FALSE</span>)</code></pre>
 </div>
+<div id="descriptive-statistics" class="section level2">
+<h2>Descriptive statistics</h2>
+<p>This smaller section does some data exploration in a nutshell. It gives hints about possible data transformation and data cleaning that has to be done later.</p>
+<div id="relationship-among-prices" class="section level3">
+<h3>Relationship among prices</h3>
+<p>The relationship among the price variables is linear – this later might cause problems when decision trees are used, as collineairity increases the correlation among trees which results in increased variance of predictions. This has to be kept in mind, when one uses high variance methods such as decision trees.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">plot</span>(DF$MMRCurrentRetailCleanPrice, DF$MMRCurrentRetailAveragePrice, 
+     <span class="dt">main =</span> <span class="st">&quot;Current Retail Prices Scatter Plot&quot;</span>,
+<span class="dt">xlab =</span> <span class="st">&quot;Current Retail Clean Price&quot;</span>, <span class="dt">ylab =</span> <span class="st">&quot;Current Retail Average Price&quot;</span>)</code></pre>
+<p><img src="data:image/png;base64,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" /><br /></p>
+</div>
+<div id="distribution-of-the-vehicle-age" class="section level3">
+<h3>Distribution of the vehicle age</h3>
+<p>The car age values are imputed with a high granularity, which means that this measure is somewhat a low quality description of the cars age – the distribution is not strongly skewed.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">hist</span>(DF$VehicleAge, <span class="dt">right =</span> <span class="ot">FALSE</span>,  <span class="dt">col =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">main =</span> <span class="st">&quot;Vehicle age in years&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Age&quot;</span>)</code></pre>
+<p><img src="data:image/png;base64,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" /><br /></p>
+</div>
+<div id="distribution-of-the-odometer-standings" class="section level3">
+<h3>Distribution of the odometer standings</h3>
+<p>The odomoter standings show a rather remarkable empirical regularity – the distribution has a tail on the left. The distribution itself is unimodal, it is fairly smooth based on the histogram.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">hist</span>(DF$VehOdo, <span class="dt">main =</span> <span class="st">&quot;Histogram for the odomoter values&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Odometer value&quot;</span>,<span class="dt">col=</span><span class="st">&quot;blue&quot;</span>)</code></pre>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAHgCAMAAABKCk6nAAAACVBMVEUAAAAAAP////9d2MkjAAAACXBIWXMAAA7DAAAOwwHHb6hkAAANEElEQVR4nO2dibajKAAFGf//o+d020YQF/blUnVm3jMJXpZKhKSjz2wgjendAKgLgsVBsDgIFgfB4iBYHASLg2BxECwOgsVBsDgIFgfB4iBYHASLg2BxECwOgsVBsDgIFgfB4iBYHASLg2BxECwOgsVBsDgIFgfB4iBYHASLg2BxWgg2xpy/jxulm2CMn3yt5b3EXWRcE6JKp9SQQH/BZfpoPgSb+oITOqIo+OnBQnW8PlxVcEpHFAX/u3G84M5XnvUK/Lv5K20VPFI8XzcxZ7nfw//+d6px2+m34D7SD/FbYEe4uzl92extpxVfs04QnQSbYzzc3/ZY2XdbG2dJu/83MVbgZu9xqcVu5V0LbiLN5hX0WnCt4HfXdilyEfzSwMTBz9w/qI6Tq2W3e5ft389jfvMecAxfYq72zruOn5sd8NQCP9KY2y7YLXXa7jbg2hdP8G1qxuDn7R5Wx4Pg48HNG9jr9pnjvRa+Yt4ffnuGPG2/Pjv9B3/5x49rXx5C8l+8e0UlQr7quBN8tD9UsBtQRLDVipKC3YbaLbD6/CzYeqyE40aCz9/OOGwPQ3/d/veMFxF86ctTq9z2JQ9+5v5BdfiCzydomGBvUEsIvmtkAcHXbv9ublbpZ8Fum7INdxO83Y2LtmC7dJBgPySePoJfx+g8WPm7fgh+GOo7wW9PN7u6p2fVw4O+OCv/vnvmvrabXiQNft7uYXX4r2DzO/qYs3/WCJjz7l+Gc9ezYCvYaYIxjgOrCdcanBb4kZef9x25NmB778u1tm3zG5g4+Jn7B9XhCz6fz5vdn3MHZ0Xl7Pwq2Ipxx8YX7NR4vW0Xv0a6VRuvZnOp5joMXl8earPGKIMWgtMo0DkYUvDDCwCSGHAQ7SkJchlyFPFbDoZRHASLg2BxECwOgsVBsDgIFgfB4iBYHASLg2BxECwOgsVBsDgIFgfB4iBYHASLg2BxECwOgsVBsDgIFgfB4iBYHASLEymY04ZmI06V8TZgcKJMmdtNGBkEi4NgcZiDxWEVLQ6qxEGwOByixWGRJQ5vk8RBcATGpXdzgkBwBOY/mzmGgDk4An3Bi6+iFxC8NggWZwHBHKK1BbPI0hbM26RVBU/25j+VdQWnxU2HvODvOXiOTqeiL/hzFT1Hp1NZQHDjuMFAMIKHg0N0BPqCWWRpC17wbZL7T/wInqPTEThOEYzg4WAOfmcxweutolcT3DiuPwiuGtcfBFeN6w+Cq8b1Zy3B31/rn6PTEbwJnuI8h8S3SWXiJuBN8BSv59i3SWXjxmc1wV/lR+1mMssJbhvXHwRXjesPgqvG9QfBVeP6g+Cqcf1BcNW4/iC4alx/EFw1rj8IrhrXHwRXjesPgqvG9QfBVeP6g+Cqcf1BcNW4/iC4alx/EFw1rj8IrhrXn9UEc2aDtmDOTdIWzNmFCM5py4ggOCNuBtYSzBysLphVtLrgxnH9QXDVuP6sJphDtLZgFlnagnmbhOCctowIgjPiZmAtwczB6oJZRasLbhzXHwTvKaNfayaZ1QRziH68NehFlVhkvRMueNDXM2+T3kFwRtwMIDgjbgbWEswcrC6YVbS64MZx/UFw1bj+rCb478GZQ7SsYPPnP/Oy2zgdK8Rags25B2+TEDwplw+VEZweNyYv3uQFLzEHLy14hVX02oIbx/UAwQ3jeoDghnE9QHDDuB4guGFcDxDcMK4HCG4Y1wMEN4zrAYIbxvUAwQ3jeoDghnE9QHDDuB4guGFcDxDcMK4HCG4Y1wMEN4zrAYIbxvUAwQ3jeoDghnE9QHDDuB6sLXiBswuXFqx5fvDLV90XE2xuN5PjRiHY29yCAy79g+CZBb9+od0rjOAJBW+fjkXn4IUEbx+OJVfRKwne3aU3b5yORbCO4OOViWBFwUFX0OQQPa/gqNIssiYUbK53fBd+KzEPiwg23j0vhRGM4HlAsF+aOXg+wQFzMKvoqQVvBf7YwDgdi2AZwRkp4/0xiggQbBXnEC0tmEXWzIK/j7K8TZpZcMgn0bebDyXmAcE3RRCsKJg5eGbBYYZZRU8ruMhb2XE6FsEigkeMawOC3eIcomcV/Efcx781HHuwyJpQsDn+ey38/r28cToWwSKCzeYYfCqMYATPBoK9MszBEwoOmIP5oGNqwXyjQ13weHFtQHC3uDYguFtcGxYRzD82iAt+uiMvbgbWEpznaJyORYDgnLgJQHBO3AQsIrjIuQnjdCyCRQSPGNcGBHeLa8Migu3rcRaIm4hFBAedHxwRNw+LCDbePVlxE4HglLiJQHBK3EQsIpg5WF0w3+hQFzxeXBsQbBXnS3cTCw47dcXb7SluKMwbiwj+/tqstyJ7KzEWEW5UBQee2eBvPpQYCwQjGMFTz8EI1j51BcGb9gcdCB4yrhwIDnPDIVpbMIusiQUHyOFt0syCA76QheCZBccVRrCiYObgaQWHNohV9NSC85s1TscuINi6kZBS5OzxmiDYuvFWnEO0tGAWWdqCeZuE4PwW1WF5wUGnFiJ4WsGxpZmDNQWzilYX3DiuHAgeMq4cCC6z0zgdu4DgoMKfa+1xOnYBwTGleQWrCv78QGScjl1AcGh587rTOB27gOCYPRD8eculZ8dTdkFw5K2eHU/ZB8HagtvF5ZB4Fj+CW8blUEQpguvG5YDgfRiGjssBwfswDB2XA4L3YRg6LgcE78MwdFwOCN6HYei4HBC8D8PQcTkgeB+GoeNyQPA+DEPH5YDgfRiGjssBwfswDB2XA4L3YRg6LgcE78MwdFwOCN6HYei4HBC8D8PQcTkgeB+GoeNyQPA+DEPH5YDgfRiGjssBwfswRBaf5/RRBO/DkFZ6ghPAEbwPQ2Lh8U8+Q/A+DImFEYzgziB4H4a00szBmoJZRasLbhyXA4L3YRg6LgcE78MQWZxDtLRgFlnagnmbhOCctpQFwfswJBZGsKJg5mB1wayi1QU3jssBwfswlEkZ4YpQFxC8D0Nk8ZEP0RWuq7Oa4LEXWRWULiZ48LdJCL4blMTCCEZwcxB8NyhppZmDNQUPvooeVnDHiwsrfdAxrmD3VttBGTousvLySpcT/DvAsMiSFPyn9K4YwYqCrVcvgoUF//mNYGXB2+Pf5UBwwK22g5JWesg/bYfgu0FJLI5gTcGN4yIrL68UwXXjIisvrxTBdeMiKy+vFMF14yIrL68UwXXjIisvrxTBdeMiKy+vFMF14yIrL68UwXXjIisvrxTBdeMiKy+vFMF14yIrL68UwXXjIisvrxTBdeMiKy+vFMF14yIrL68UwXXjIisvrxTBdeMiKy+vFMF14yIrL68UwXXjPqurfUYwguvGfVZXXiKCW8Z9VldeIoJbxn1WV14iglvGfVZXXiKCW8Z9VldeIoJbxn1WV14iglvGfVZXXiKCW8Z9VldeIoJbxn1WV14iglvGfVZXXiKCW8bdVND2w0kE1427qaC8NgT3i7upoLw2BPeLu6mgvDYE94u7qaC8NgT3i7upoLy25oKbXvdufMFd181VBLu3KuuOvYRD+2tVdlXaQLB7q/zwpZV+2q1IAwd6zS4m2NxuJsc9VlN/HNNurSv4YQ4xUJKOgmFYCs/BMBqFV9EwGqgSB8HiIFgcBIuDYHEQLA6CxUGwOFUF9/zgVpA0B4WdlghPbVPj/eZoJoLFm4lg8WYiWLyZCBZvJoLFm4lg8WYiWLyZCBZvJh9VioNgcRAsDoLFQbA4CBYHweIgWBwEi4NgcRAsDoLFQbA4FQUHfdHz93XQX+mXjZKNalFfRFUl+3jXhkrJn+m/QiEbJRvVor7jqduyTr8RVVJ/wR/xv0IhGyUb1aI+c7pr2UevFZWIaHNrwVuT+o4oBDcV/G+ua1Mfgn9lWgk+6kJwoeDRBAdUg+CY4ID4hodMBBcP/o437k8EF6a3YHMpjeDCVBP8NznUr1X6ZaNko5rUd3prV+d9G+pEf3/6Zp26zkeVZep8aAOogmBxECwOgsVBsDgIFgfB4iBYHASLg2BxECwOgsVBsDgIFgfB4iBYHASLg2BxECwOgsVBsDgIFgfB4iBYHASLg2BxECyOnODLn+ksedbalEzb8AesMza3y+bbHoVKDci0Db/HOd3Y3frYpUipAZm24bc4pxv/PSXTPjX13zV23Gvrmd+vo8gZZD9uHxyqnetZgXlaGoJ3PrlzWR3j37NZ3n6PbpZgc/52C1bvSyGmaWgQtmBzv2Hu7r2U3X732g94e07BLO0Mo7jgv5sGwaMQI/i4esQx0f5uHAnndHsRfF53YgJmaWcY0a/g7TKjXgU/H6JnYa7WfmKtkfIO0Z+CZxm4WdoZyinxXBU7K19vLezd4SVZc7C5KTg20zQ0FGt69N8Huz/s6zc5V6Hdzk3zL8Tc5E3BPC2FJBAsDoLFQbA4CBYHweIgWBwEi4NgcRAsDoLFQbA4CBYHweIgWBwEi4NgcRAsDoLFQbA4CBYHweIgWBwEi/M/1Flv4Kfd314AAAAASUVORK5CYII=" /><br /></p>
+</div>
+<div id="distribution-of-warranty-costs" class="section level3">
+<h3>Distribution of warranty costs</h3>
+<p>The distribution of the warranty costs shows a distribution that is very tipycal in case of price, income and cost variables. It has a skewed distribution with a tail on the right, as later I use tree based methods I do not implement normalization (log trasformation) and standardization to deal with these. Tree based methods are invariant to monotonous transformations.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">hist</span>(DF$WarrantyCost, <span class="dt">main =</span> <span class="st">&quot;Histogram of the warranty costs&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Warranty cost&quot;</span>,
+     <span class="dt">right=</span><span class="ot">FALSE</span>,  <span class="dt">col=</span><span class="st">&quot;orange&quot;</span>)</code></pre>
+<p><img src="data:image/png;base64,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" /><br /></p>
+</div>
+<div id="distribution-of-vehicle-acquisition-costs" class="section level3">
+<h3>Distribution of vehicle acquisition costs</h3>
+<p>The distribution of the vehicle acquisition costs describe the distribution of the prices that the auctioner paid for acquiring the car that is sold later. Intruiguingly this is just slightly skewed, unlike the warranty costs histogram that had shown a strongly visible skewed distribution – it had a tail on the right.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">hist</span>(DF$VehBCost, <span class="dt">main=</span><span class="st">&quot;Histogram of the vehicle accquisiton costs&quot;</span>, <span class="dt">xlab =</span> <span class="st">&quot;Acquisiton cost&quot;</span>,
+     <span class="dt">right=</span><span class="ot">FALSE</span>,  <span class="dt">col=</span><span class="st">&quot;green&quot;</span>)</code></pre>
+<p><img src="data:image/png;base64,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" /><br /></p>
+</div>
+</div>
 <div id="dropping-the-id-variable-and-extracting-engine-properties" class="section level2">
 <h2>Dropping the ID variable and extracting engine properties</h2>
-<p>The first variable is an ID of the observations, to prevent data leakage I drop it from the dataset. Importantly the Model and Submodel variables are stored as string. They contain valuable information about the driving system of the car, the number of cylinders. Moreover, the strings alos describes whether the engine uses one of the following:</p>
+<p>The first variable is an ID of the observations, to prevent data leakage I drop it from the dataset. Importantly the Model and Submodel variables are stored as string. They contain valuable information about the driving system of the car, the number of cylinders. Moreover, the strings also describe whether the engine uses one of the following:</p>
 <ul>
 <li>Sequential Multiport Fuel Injection</li>
 <li>Sequential Fuel Injection</li>
 <li>Multiport Fuel Injection</li>
 <li>Double Overhead Camshaft</li>
 </ul>
-<p>As a matter of fact this is not stated explicitly by Kaggle, so as part of my project I looked up what is the exact meaning of the abbrevations. I also took a look at the unique values of the Model and Submodel variables to get ideas about potential predictor extractions. The different engine properties are encoded as dummies, the dummy variables take the value 1, when a the engine of the car has the property described the variable.</p>
+<p>As a matter of fact this is not stated explicitly by Kaggle, so as part of my project I looked up what is the exact meaning of the abbrevations. I also took a look at the unique values of the Model and Submodel variables to get ideas about potential predictor extractions. The different engine properties are encoded as dummies, the dummy variables take the value 1, when the engine of the car has the property described by the string.</p>
 <pre class="sourceCode r"><code class="sourceCode r">DF &lt;-<span class="st"> </span>DF[,-<span class="dv">1</span>]
 
 Extract &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;4WD&quot;</span>,<span class="st">&quot;2WD&quot;</span>,<span class="st">&quot;AWD&quot;</span>,<span class="st">&quot;FWD&quot;</span>,<span class="st">&quot;V8&quot;</span>,<span class="st">&quot;V6&quot;</span>,<span class="st">&quot;4C&quot;</span>,<span class="st">&quot;6C&quot;</span>,<span class="st">&quot;DOHC&quot;</span>,<span class="st">&quot;MPI&quot;</span>,<span class="st">&quot;SF&quot;</span>,<span class="st">&quot;MFI&quot;</span>,<span class="st">&quot;EF&quot;</span>)
@@ -99,7 +184,7 @@ for ( i in <span class="dv">1</span>:<span class="kw">length</span>(Extract)){
 </div>
 <div id="the-number-of-injectors" class="section level2">
 <h2>The number of injectors</h2>
-<p>The dataset describes the number of injectors in the engine, to extract these I used the grep function. It worth emphasizing that this property is described in 3 differnt ways, without whitespace, with a whitespace and with a “-” sign.</p>
+<p>The dataset describes the number of injectors in the engine, to extract these I used the grep function. It worth emphasizing that this property is described in 3 different ways, without whitespace, with a whitespace and with a “-” sign.</p>
 <pre class="sourceCode r"><code class="sourceCode r">DF$I4 &lt;-<span class="st"> </span><span class="dv">0</span>
 DF$I4[<span class="kw">grep</span>(<span class="st">&quot;I4&quot;</span>, DF$Model)] &lt;-<span class="st"> </span><span class="dv">1</span>
 DF$I4[<span class="kw">grep</span>(<span class="st">&quot;I 4&quot;</span>, DF$Model)] &lt;-<span class="st"> </span><span class="dv">1</span>
@@ -168,7 +253,7 @@ DF &lt;-<span class="st"> </span><span class="kw">cbind</span>(DF,Day,Month,Year
 </div>
 <div id="common-group-for-low-frequency-values-in-trim" class="section level2">
 <h2>Common group for low frequency values in Trim</h2>
-<p>The trim variables has a large number of values that have a low occurence (only 5-200 instances). These occurences are merged into one signle group in this step. The cutoff is chosen at 200. This results altogether in 43 unique categoires in the Trim variable – including the large group that contains the merged categories with low counts.</p>
+<p>The trim variables has a large number of values that have a low occurence (only 5-200 instances). These occurences are merged into one single group in this step. The cutoff is chosen at 200. This results altogether in 43 unique categories in the Trim variable – including the large group that contains the merged categories with low counts.</p>
 <p>As a last step the previously used string variabels such as Date, Model, Submodel and Trim are dropped from the main dataframe.</p>
 <pre class="sourceCode r"><code class="sourceCode r">Trim_drops &lt;-<span class="st"> </span><span class="kw">as.data.frame</span>(<span class="kw">count</span>(DF, <span class="st">'Trim'</span>))
 Trim_drops &lt;-<span class="st"> </span>Trim_drops[Trim_drops$freq &gt;<span class="st"> </span><span class="dv">200</span>,]
@@ -182,7 +267,7 @@ DF &lt;-<span class="st"> </span>DF[,-<span class="dv">2</span>]</code></pre>
 </div>
 <div id="ratios-from-prices" class="section level2">
 <h2>Ratios from prices</h2>
-<p>The prices have to be stored as numeric values. First I calculate ratios from the average and specific prices of the cars. These are more normalied than the differences would be. Later on I calculate ratios from these price ratios and the cars age. I also normalize the prices by the standing of the odometer. I do normalizations by the vehicles cost and the warranty cost also. As a last step I calculate the ratio of the vehicle and warranty costs.</p>
+<p>The prices have to be stored as numeric values. First I calculate ratios from the average and specific prices of the cars. These are more normalized than the differences would be. Later on I calculate ratios from these price ratios and the cars age. I also normalize the prices by the standing of the odometer. I do normalizations by the vehicles cost and the warranty cost also. As a last step I calculate the ratio of the vehicle and warranty costs.</p>
 <pre class="sourceCode r"><code class="sourceCode r">for (i in <span class="dv">14</span>:<span class="dv">21</span>){DF[,i] &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(DF[,i])}
 
 DF$AcAuPrice &lt;-<span class="st"> </span>DF[,<span class="dv">15</span>]/DF[,<span class="dv">14</span>]
@@ -215,7 +300,7 @@ DF$CostRatio &lt;-<span class="st"> </span>DF$VehBCost /<span class="st"> </span
 </div>
 <div id="dummies-from-factors" class="section level2">
 <h2>Dummies from factors</h2>
-<p>The factor variables can be transformed into dummies, this speeds up the use of randomforest and gradient boosting – and makes possible the use of neural networks. The dummy separation is applied on maker, day, year, month, the vehicle production date, color, nationality, the state, engine size and on the encoded trim variable. The original factors are dropped from the dataset.</p>
+<p>The factor variables can be transformed into dummies, this speeds up the use of randomforest and gradient boosting – and would make possible the use of neural networks. The dummy separation is applied on maker, day, year, month, the vehicle production date, color, nationality, the state, engine size and on the encoded trim variable. The original factors are dropped from the dataset.</p>
 <pre class="sourceCode r"><code class="sourceCode r">DF&lt;-DF[,-<span class="kw">c</span>(<span class="dv">25</span>,<span class="dv">24</span>)]
 
 DF &lt;-<span class="st"> </span><span class="kw">cbind</span>(DF,<span class="kw">dummy</span>(DF$Make))
@@ -241,12 +326,245 @@ for (i in <span class="dv">1</span>:<span class="kw">ncol</span>(DF)){
   <span class="kw">print</span>(i)
   
   if (<span class="kw">unique</span>(DF[,i]) ==<span class="st"> </span><span class="dv">1</span>){Dropout_lister &lt;-<span class="st"> </span><span class="kw">rbind</span>(Dropout_lister, <span class="kw">c</span>(i))}
-}</code></pre>
+}
+
+DF &lt;-<span class="st"> </span>DF[,-Dropout_lister]</code></pre>
 </div>
 <div id="creating-the-dataset-used-for-machine-learning" class="section level2">
 <h2>Creating the dataset used for machine learning</h2>
-<p>The dataset is now ready for additional data exploration and machine learning. It is stored as a comma spearated values file without the rownames.</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">write.csv</span>(DF,<span class="dt">file=</span><span class="st">&quot;Clean_dataset.csv&quot;</span>,<span class="dt">row.names=</span><span class="ot">FALSE</span>)</code></pre>
+<p>The dataset is now close to be ready for machine learning. As a last step it is stored as a comma spearated values file without the rownames.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">write.csv</span>(DF, <span class="dt">file=</span><span class="st">&quot;Clean_dataset.csv&quot;</span>,<span class="dt">row.names=</span><span class="ot">FALSE</span>)</code></pre>
+</div>
+</div>
+<div id="part-ii.-machine-learning" class="section level1">
+<h1>Part II. – Machine learning</h1>
+<div id="loading-needed-machine-learning-libraries" class="section level2">
+<h2>Loading needed machine learning libraries</h2>
+<p>The machine learning part of the study focuses on tree based methods, as we have covered them in the course extensively. I load in one additional package to plot receiver operating curves.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(ranger)
+<span class="kw">library</span>(rpart)
+<span class="kw">library</span>(gbm)
+<span class="kw">library</span>(ROCR)</code></pre>
+</div>
+<div id="loading-the-new-dataset" class="section level2">
+<h2>Loading the new dataset</h2>
+<p>I load in the clean dataset for the machine learning part.</p>
+<pre class="sourceCode r"><code class="sourceCode r">DF &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="dt">file =</span> <span class="st">&quot;Clean_dataset.csv&quot;</span>)</code></pre>
+</div>
+<div id="defining-a-mode-function-for-ensemble-decision-making" class="section level2">
+<h2>Defining a mode function for ensemble decision making</h2>
+<p>I will use ensemble learning extensively, so I need a mode function to make a majority voting about the status of the car (lemon or good one) based on the comitee voting in the ensemble.</p>
+<pre class="sourceCode r"><code class="sourceCode r">mode &lt;-<span class="st"> </span>function(row) {
+  urow &lt;-<span class="st"> </span><span class="kw">unique</span>(row)
+  urow[<span class="kw">which.max</span>(<span class="kw">tabulate</span>(<span class="kw">match</span>(row, urow)))]}</code></pre>
+</div>
+<div id="defining-a-mode-function-for-ensemble-decision-making-1" class="section level2">
+<h2>Defining a mode function for ensemble decision making</h2>
+<p>To do proper model selection I splitted my sample randomly into train and test sets, the train has 80% of the original dataset and the test set has the remainder part. Before doing this I set the outcome variable to be a factor, because I start the modeling with classification trees and random forests.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">2016</span>)
+DF$IsBadBuy &lt;-<span class="st"> </span><span class="kw">as.factor</span>(DF$IsBadBuy)
+N &lt;-<span class="st"> </span><span class="kw">nrow</span>(DF)
+ID &lt;-<span class="st"> </span><span class="kw">sample</span>(<span class="dv">1</span>:N, <span class="fl">0.8</span>*N)
+Train &lt;-<span class="st"> </span>DF[ID,]
+Test &lt;-<span class="st"> </span>DF[-ID,]</code></pre>
+</div>
+<div id="pruned-decision-tree-learning" class="section level2">
+<h2>Pruned decision tree learning</h2>
+<p>In this part I will consider a very simple model – a pruned decision tree. First i fit a decision tree with the baseline settings – the complexity parameter is set to be zero. ### Estimating the tree and post-pruning</p>
+<pre class="sourceCode r"><code class="sourceCode r">error_tree &lt;-<span class="st"> </span><span class="kw">c</span>()
+complexity &lt;-<span class="st"> </span><span class="kw">c</span>()
+tree_model &lt;-<span class="st"> </span><span class="kw">rpart</span>(IsBadBuy~<span class="st"> </span>., <span class="dt">data =</span> Train , <span class="dt">control =</span> <span class="kw">rpart.control</span>(<span class="dt">cp =</span> <span class="dv">0</span>))</code></pre>
+<p>Later I prune the fitted model based on different complexity values – between 0.00005 and 0.025. For each of the pruned trees I calculate the test set error to help model selection. This can be visualized also.</p>
+<pre class="sourceCode r"><code class="sourceCode r">for (i in <span class="dv">1</span>:<span class="dv">500</span>){
+  
+    <span class="kw">print</span>(i)
+    complexity[i] &lt;-<span class="st"> </span>i*<span class="fl">0.00005</span>
+    pruned_tree &lt;-<span class="st"> </span><span class="kw">prune</span>(tree_model,<span class="dt">cp =</span> i*<span class="fl">0.00005</span>)
+    
+    phat &lt;-<span class="st"> </span><span class="kw">predict</span>(pruned_tree, Test)[,<span class="st">&quot;1&quot;</span>]
+    
+    tab &lt;-<span class="st"> </span><span class="kw">table</span>(<span class="kw">ifelse</span>(phat &gt;<span class="st"> </span><span class="fl">0.5</span>,<span class="dv">1</span>,<span class="dv">0</span>), Test$IsBadBuy)
+    error_tree[i] &lt;-<span class="st"> </span>((tab[<span class="dv">1</span>,<span class="dv">2</span>]+tab[<span class="dv">2</span>,<span class="dv">1</span>]) /<span class="st"> </span><span class="kw">nrow</span>(Test))
+    <span class="kw">print</span>(error_tree[i])
+}
+
+tree_tuning &lt;-<span class="st"> </span><span class="kw">cbind</span>(complexity, error_tree)
+
+<span class="kw">write.csv</span>(tree_tuning, <span class="dt">file =</span> <span class="st">&quot;error_rates_trees.csv&quot;</span>, <span class="dt">row.names =</span> <span class="ot">FALSE</span>)</code></pre>
+<div id="plotting-the-error-rate-as-a-function-of-complexity" class="section level3">
+<h3>Plotting the error rate as a function of complexity</h3>
+<p>The error rate as a function of the complexity shows that the optimal complexity pruning is around 0.00035. This is also supported by the printout of the best fitting models error value.</p>
+<pre class="sourceCode r"><code class="sourceCode r">tree_input &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;error_rates_trees.csv&quot;</span>)
+<span class="kw">plot</span>(tree_input$complexity,tree_input$error_tree,<span class="dt">type=</span><span class="st">&quot;l&quot;</span>,
+     <span class="dt">main =</span> <span class="st">&quot;Test error as a function of complexity&quot;</span>,
+     <span class="dt">xlab=</span><span class="st">&quot;Complexity&quot;</span>,<span class="dt">ylab=</span><span class="st">&quot;Test error rate&quot;</span>,<span class="dt">col=</span><span class="st">&quot;blue&quot;</span>)</code></pre>
+<p><img src="data:image/png;base64,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" /><br /> ### Choosing the optimal complexity of pruning</p>
+<p>The optimal level of pruning is at where the test error is minimal, this is simply printing out the dataframe elements where the error equals the minimal error. There are multiple complexity parameters that result in pruned trees that are essentially same.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(tree_input[tree_input$error_tree ==<span class="st"> </span><span class="kw">min</span>(tree_input$error_tree),])</code></pre>
+<pre><code>##    complexity error_tree
+## 15    0.00075 0.09693773
+## 16    0.00080 0.09693773
+## 17    0.00085 0.09693773</code></pre>
+</div>
+<div id="fitting-the-optimal-pruned-tree" class="section level3">
+<h3>Fitting the optimal pruned tree</h3>
+<pre class="sourceCode r"><code class="sourceCode r">pruned_tree &lt;-<span class="st"> </span><span class="kw">prune</span>(tree_model, <span class="dt">cp =</span> <span class="fl">0.00075</span>)
+phat &lt;-<span class="st"> </span><span class="kw">predict</span>(pruned_tree, Test)[,<span class="st">&quot;1&quot;</span>]
+<span class="kw">write.csv</span>(phat, <span class="dt">file =</span> <span class="st">&quot;tree_predictions.csv&quot;</span>, <span class="dt">row.names =</span> <span class="ot">FALSE</span>)</code></pre>
+<p>Based on the optimally pruned tree one can make prediction and plot the receiver operating curve to evaluate the model. The fit is fairly weak, as the area under the curve is pretty small. However, it should not be overlooked that obtaining a strong fit is not easy, because the problem is unbalanced. The contingency table shows that misclassifications are largely due to false negatives, 1369 of the misclassifications is a false negative one. From a business point of view this model is dangerous. Rejecting cars that are good ones (false positive flagging of lemons) is less costly than buying bad ones.</p>
+</div>
+<div id="making-predictions-and-plotting-roc-curve" class="section level3">
+<h3>Making predictions and plotting ROC curve</h3>
+<pre class="sourceCode r"><code class="sourceCode r">phat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;tree_predictions.csv&quot;</span>)
+pred &lt;-<span class="st"> </span><span class="kw">prediction</span>(phat,Test$IsBadBuy)
+perf &lt;-<span class="st"> </span><span class="kw">performance</span>(pred,<span class="st">&quot;tpr&quot;</span>,<span class="st">&quot;fpr&quot;</span>)
+<span class="kw">plot</span>(perf) </code></pre>
+<p><img src="data:image/png;base64,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" /><br /></p>
+<pre class="sourceCode r"><code class="sourceCode r">table_contingency &lt;-<span class="st"> </span><span class="kw">table</span>(<span class="kw">ifelse</span>(phat&gt;<span class="fl">0.5</span>,<span class="dv">1</span>,<span class="dv">0</span>), Test$IsBadBuy)
+<span class="kw">print</span>(table_contingency)</code></pre>
+<pre><code>##    
+##         0     1
+##   0 12800  1369
+##   1    46   382</code></pre>
+</div>
+</div>
+<div id="random-forest-ensemble-learning" class="section level2">
+<h2>Random forest ensemble learning</h2>
+<div id="setting-the-number-of-predictors-and-learning-the-forests" class="section level3">
+<h3>Setting the number of predictors and learning the forests</h3>
+<p>The random forest that I fit have a different number of predictors than the baseline setup – which is the square root of the possible predictors floored down. During the modeling I have to face two problems:</p>
+<ol style="list-style-type: decimal">
+<li><p>The prices and the price ratios are correlated – essentially the weak learners migth end up being correlated.</p></li>
+<li><p>There is a large number of uncorrelated dummy variables – the trees are extremely weak if a lower number of predictors is used than the preset number of predictors.</p></li>
+</ol>
+<p>There is a clear trade-off between the two criteria. Because of this I fit random forest ensembles with different number of predictors – I use <span class="math">\(4,8,12,\dots,48\)</span> predictors in the ensembles. The ensembles have 10 random forests, and each of the forests has 100 trees. The predictions on the test and training sets are both saved as comma separated values files. The seed is set within the loop, so the results are reproducible. Importantly, I used the  R package which is a relativiely fast implementation of the random forest algorithm.</p>
+<pre class="sourceCode r"><code class="sourceCode r">mtry_rate &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">4</span>,<span class="dv">8</span>,<span class="dv">12</span>,<span class="dv">16</span>,<span class="dv">20</span>,<span class="dv">24</span>,<span class="dv">28</span>,<span class="dv">32</span>,<span class="dv">36</span>,<span class="dv">40</span>,<span class="dv">44</span>,<span class="dv">48</span>)
+error &lt;-<span class="st"> </span><span class="kw">c</span>()
+
+for (k in <span class="dv">1</span>:<span class="dv">12</span>){
+  yhat &lt;-<span class="st"> </span><span class="kw">c</span>()
+  yhat_train &lt;-<span class="st"> </span><span class="kw">c</span>()
+  prednum &lt;-<span class="st"> </span>mtry_rate[k]
+  for( i in <span class="dv">1</span>:<span class="dv">10</span>){
+  
+    <span class="kw">print</span>(i)
+    md &lt;-<span class="st"> </span><span class="kw">ranger</span>(IsBadBuy ~<span class="st"> </span>., <span class="dt">data =</span> Train, <span class="dt">num.trees =</span> <span class="dv">100</span>,
+                 <span class="dt">mtry =</span> prednum, <span class="dt">verbose =</span> <span class="ot">TRUE</span>, <span class="dt">write.forest=</span><span class="ot">TRUE</span>, <span class="dt">classification =</span> <span class="ot">TRUE</span>, <span class="dt">seed =</span> i)
+
+    yhat &lt;-<span class="st"> </span><span class="kw">cbind</span>(yhat, <span class="kw">as.numeric</span>(<span class="kw">predict</span>(md, Test, <span class="dt">n.trees =</span> <span class="dv">100</span>)$predictions ) -<span class="st"> </span><span class="dv">1</span>)
+    
+    yhat_train &lt;-<span class="st"> </span><span class="kw">cbind</span>(yhat_train, <span class="kw">as.numeric</span>(<span class="kw">predict</span>(md, Train, <span class="dt">n.trees =</span> <span class="dv">100</span>)$predictions ) -<span class="st"> </span><span class="dv">1</span>)
+    <span class="kw">rm</span>(md)
+    }
+
+  <span class="kw">write.csv</span>(yhat, <span class="dt">file =</span> <span class="kw">paste0</span>(<span class="st">&quot;randomforest_ensemble_predictors_test_&quot;</span>, prednum,
+                                <span class="st">&quot;.csv&quot;</span>), <span class="dt">row.names =</span> <span class="ot">FALSE</span>)
+  <span class="kw">write.csv</span>(yhat_train, <span class="dt">file =</span> <span class="kw">paste0</span>(<span class="st">&quot;randomforest_ensemble_predictors_train_&quot;</span>, prednum,
+                                      <span class="st">&quot;.csv&quot;</span>), <span class="dt">row.names =</span> <span class="ot">FALSE</span>)
+}</code></pre>
+</div>
+<div id="the-error-rate-of-the-random-forests" class="section level3">
+<h3>The error rate of the random forests</h3>
+<p>Based on the saved test predictions a simple error rate can be calculated for each of the ensembles. This function calculates the error based on the mode of the predictions (this is why I needed the mode – to take a majority vote based on the predictions). For each fitted random forest ensemble (<span class="math">\(p=4,8,\dots,48\)</span>) I calculate a test error and dump the vector of errors (12 entries) as a csv file for plotting and model selection.</p>
+<pre class="sourceCode r"><code class="sourceCode r">mtry_rate &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">4</span>,<span class="dv">8</span>,<span class="dv">12</span>,<span class="dv">16</span>,<span class="dv">20</span>,<span class="dv">24</span>,<span class="dv">28</span>,<span class="dv">32</span>,<span class="dv">36</span>,<span class="dv">40</span>,<span class="dv">44</span>,<span class="dv">48</span>)
+error &lt;-<span class="st"> </span><span class="kw">c</span>()
+for (i in <span class="dv">1</span>:<span class="dv">12</span>){
+  
+  yhat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="kw">paste0</span>(<span class="st">&quot;./Dataset/randomforest_ensemble_predictors_test_&quot;</span>,mtry_rate[i],<span class="st">&quot;.csv&quot;</span>))
+  ensemble_y &lt;-<span class="st"> </span><span class="kw">c</span>()
+
+  for (j in <span class="dv">1</span>:<span class="kw">nrow</span>(yhat)){
+  
+    if (j %%<span class="st"> </span><span class="dv">1000</span> ==<span class="st"> </span><span class="dv">0</span>){ <span class="kw">print</span>(j) }
+  
+    ensemble_y[j] &lt;-<span class="st"> </span><span class="kw">mode</span>(yhat[j,])
+  }
+
+  error[i] &lt;-<span class="st"> </span><span class="kw">sum</span>(ensemble_y !=<span class="st"> </span><span class="kw">as.numeric</span>(Test$IsBadBuy) -<span class="st"> </span><span class="dv">1</span>) /<span class="st"> </span><span class="kw">nrow</span>(Test)
+  
+  <span class="kw">print</span>(error[i])
+}
+
+<span class="kw">write.csv</span>(error, <span class="dt">file=</span><span class="st">&quot;error_rates_random_forest.csv&quot;</span>, <span class="dt">row.names =</span> <span class="ot">FALSE</span>)</code></pre>
+</div>
+<div id="error-rate-as-a-function-of-predictors-in-the-forest" class="section level3">
+<h3>Error rate as a function of predictors in the forest</h3>
+<p>The error rates of the different random forests can be plotted as a function of the randomly choosen predictors used for model evaluation. Based on this plot it is clear that the best model is an ensemble of 10 random forests, each of them with 100 trees with 40 randomly choosen variables.</p>
+<pre class="sourceCode r"><code class="sourceCode r">error_rate &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;error_rates_random_forest.csv&quot;</span>)$x
+predictors &lt;-<span class="st"> </span><span class="dv">4</span>*<span class="st"> </span><span class="dv">1</span>:<span class="dv">12</span>
+<span class="kw">plot</span>(predictors,error_rate,<span class="dt">type=</span><span class="st">&quot;o&quot;</span>,<span class="dt">col=</span><span class="st">&quot;red&quot;</span>,<span class="dt">xlab=</span><span class="st">&quot;Number of predictors&quot;</span>,
+     <span class="dt">ylab=</span><span class="st">&quot;Error rate&quot;</span>,<span class="dt">main=</span><span class="st">&quot;Error rate as a function of predictors in the forest&quot;</span>)</code></pre>
+<p><img src="data:image/png;base64,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" /><br /></p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">print</span>(error_rate)</code></pre>
+<pre><code>##  [1] 0.11892855 0.11461259 0.10707680 0.10269233 0.10063712 0.09967802
+##  [7] 0.09851339 0.09796534 0.09803384 0.09693773 0.09782832 0.09721176</code></pre>
+<p>Based on the error rates plotted as a function of the predictors, the best performing model is an ensemble of random forests with 40 predictors. It has the same predicted error rate on the test set as the pruned single tree. Intriguingly, the ratio of false negatives is lower than in case of the pruned tree (now it is only 1323/14597), from a business point of view this model is better than the single tree. The ratio of undetected lemons is lower – the car auctioner would be better off if she or he we would calculate the net loss based on the acquistion prices. So simply the cost of the two types of errors is not symmetric.</p>
+</div>
+</div>
+<div id="gradient-boosting-with-grid-search" class="section level2">
+<h2>Gradient boosting with grid search</h2>
+<div id="setting-the-predicted-variable-and-the-hyper-parameters" class="section level3">
+<h3>Setting the predicted variable and the hyper parameters</h3>
+<p>The gradient boosting needs outcome variables that are numeric, both the test and train set bad buy variables are stored as factors. Because of this I redefine them as numerics and subtract 1 to define them to be in the zero-one interval. Later I also define a matrix to store the test error values obtained from the grid search and vectors to store the potential hyper parameter values. The depth of the interaction can be 1,5, or 10 while the shrinkage variew between 0.1, 0.3 and 0.5.</p>
+<pre class="sourceCode r"><code class="sourceCode r">Train$IsBadBuy &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(Train$IsBadBuy)-<span class="dv">1</span>
+
+Test$IsBadBuy &lt;-<span class="st"> </span><span class="kw">as.numeric</span>(Test$IsBadBuy)-<span class="dv">1</span>
+
+error &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">3</span>)
+interaction_values &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">10</span>)
+shrinkage_values &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="fl">0.5</span>, <span class="fl">0.3</span>, <span class="fl">0.1</span>)</code></pre>
+</div>
+<div id="fitting-the-gradient-boosted-trees" class="section level3">
+<h3>Fitting the gradient boosted trees</h3>
+<p>Based on the hyperparameters vectors above I fit 9 different gradient boosted tree models with grid searching. The gradient boosted models always have 20 trees, based on the verbose fitting procedures the overfitting starts around 20 trees. In each case I save the predictions on the test set and calculate the prediction error. The initial setup parameters of the model such as the size of the bag are unchanged.</p>
+<pre class="sourceCode r"><code class="sourceCode r">for (i in <span class="dv">1</span>:<span class="dv">3</span>){
+  
+  for (j in <span class="dv">1</span>:<span class="dv">3</span>){
+    
+    depth =<span class="st"> </span>interaction_values[i]
+    shrink =<span class="st"> </span>shrinkage_values[j]
+    
+    model &lt;-<span class="st"> </span><span class="kw">gbm</span>(IsBadBuy ~<span class="st"> </span>., <span class="dt">data =</span> Train, <span class="dt">n.trees =</span> <span class="dv">20</span>,<span class="dt">distribution=</span><span class="st">&quot;bernoulli&quot;</span>,
+                 <span class="dt">shrinkage=</span>shrink,<span class="dt">interaction.depth =</span> depth,<span class="dt">verbose=</span><span class="ot">TRUE</span>)
+    
+    yhat &lt;-<span class="st"> </span><span class="kw">predict</span>(model, Test, <span class="dt">n.trees =</span> <span class="dv">20</span>) 
+    
+    <span class="kw">write.csv</span>(yhat ,<span class="dt">file =</span> <span class="kw">paste0</span>(<span class="st">&quot;predictions_test_GBM_depth_&quot;</span>,depth,
+                               <span class="st">&quot;_shrink_&quot;</span>,shrink,<span class="st">&quot;.csv&quot;</span>),<span class="dt">row.names=</span><span class="ot">FALSE</span>)
+    
+    tab_gbm &lt;-<span class="st"> </span><span class="kw">table</span>(<span class="kw">ifelse</span>(yhat &gt;<span class="st"> </span><span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>), Test$IsBadBuy)
+    error[i,j] &lt;-<span class="st"> </span>(tab_gbm[<span class="dv">1</span>,<span class="dv">2</span>] +<span class="st"> </span>tab_gbm[<span class="dv">2</span>,<span class="dv">1</span>]) /<span class="st"> </span><span class="kw">nrow</span>(Test)
+  }
+}
+
+<span class="kw">write.csv</span>(error, <span class="dt">file =</span> <span class="st">&quot;gbm_error_values.csv&quot;</span>, <span class="dt">row.names =</span> <span class="ot">FALSE</span>)</code></pre>
+</div>
+<div id="evaluation-of-the-gbm-models" class="section level3">
+<h3>Evaluation of the GBM models</h3>
+<p>The error on the separated test set is lower in case of the model with interaction depth 10 and shrinkage parameter 0.1. Based on this I choose this one from the gradient boosted trees. The values in the matrix imply that other shrinkage and interaction depth values migth give a lower test error, but here I do not consider anything else.</p>
+<p>The number of false positives is extremely low in case of the best model – it is only 49 cars from the test sample. This implies that this model is extremely useless from a business point of view, because false positives are less costly for the car auctioner than false negative ones. The error rate is low, but the unbalanced nature of the classification problem has to be taken into account.</p>
+<pre class="sourceCode r"><code class="sourceCode r">error &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;gbm_error_values.csv&quot;</span>)
+<span class="kw">print</span>(error)</code></pre>
+<pre><code>##          V1         V2         V3
+## 1 0.1024183 0.10303487 0.10317188
+## 2 0.1013222 0.09892444 0.09878742
+## 3 0.1024183 0.09830787 0.09803384</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">zhat &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="dt">file =</span> <span class="st">&quot;predictions_test_GBM_depth_10_shrink_0.1.csv&quot;</span>)[<span class="dv">1</span>]
+table_contingency &lt;-<span class="st"> </span><span class="kw">table</span>(<span class="kw">ifelse</span>(zhat &gt;<span class="st"> </span><span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>), <span class="kw">as.numeric</span>(Test$IsBadBuy)-<span class="dv">1</span>)
+<span class="kw">print</span>(table_contingency)</code></pre>
+<pre><code>##    
+##         0     1
+##   0 12773  1358
+##   1    73   393</code></pre>
+</div>
+</div>
+<div id="discussion" class="section level2">
+<h2>Discussion</h2>
+<p>Surprisingly the random forest and the simple pruned tree misclassify at the same rate. The gradient boosted trees do considerably worth. However with additional tuning and maybe with early stopping the gradient boosting method might give fairly better results. <strong>However, to sum it up in this specific case the asymmetric cost of misclassification should be also considered. I would choose the random forest to put in production, because it gave a fair trade of between the two types of classification errors, it cannout be overfit and the test error was the lowest.</strong> Importantly other external variables might improve the results fairly – I read some posts on Kaggle about the importance of the selling point – car owner’s home distance.</p>
+</div>
+<div id="section" class="section level2">
+<h2></h2>
+</div>
 </div>
 
 
